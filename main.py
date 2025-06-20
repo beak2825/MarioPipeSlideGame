@@ -23,6 +23,8 @@ PIPE_Y = WINDOW_HEIGHT - 40
 MAX_PATH_LENGTH = WINDOW_HEIGHT // 10
 MUSIC_FOLDER = "music/"
 SOUNDS_FOLDER = "sounds/"
+SPRITES_FOLDER = "sprites/"
+# --- Sound Paths ---
 MAIN_MUSIC = MUSIC_FOLDER + "slides.mp3"
 SOUND_PATH = SOUNDS_FOLDER + "scream.mp3"
 WIN_SOUND_PATH = SOUNDS_FOLDER + "win.mp3"
@@ -30,7 +32,21 @@ DRAW_SOUND_PATH = SOUNDS_FOLDER + "line_drawing.mp3"
 SNAP_SOUND_PATH = SOUNDS_FOLDER + "line_snap.mp3"
 POP_SOUND_PATH = SOUNDS_FOLDER + "mario_pop.mp3"
 
+# --- Sprites ---
+SPRITE_MARIO_PATH = SPRITES_FOLDER + "mario.png"
+SPRITE_STAR_PATH = SPRITES_FOLDER + "star.png"
+SPRITE_PIPE_PATH = SPRITES_FOLDER + "pipe.png"
+SPRITE_PIRANHA_PATH = SPRITES_FOLDER + "piranha.png"
+
+# Load images as Surfaces
+SPRITE_MARIO = pygame.image.load(SPRITE_MARIO_PATH) if os.path.exists(SPRITE_MARIO_PATH) else pygame.Surface((MARIO_SIZE, MARIO_SIZE))
+SPRITE_STAR = pygame.image.load(SPRITE_STAR_PATH) if os.path.exists(SPRITE_STAR_PATH) else pygame.Surface((STAR_SIZE, STAR_SIZE))
+SPRITE_PIPE = pygame.image.load(SPRITE_PIPE_PATH) if os.path.exists(SPRITE_PIPE_PATH) else pygame.Surface((20, 20))
+SPRITE_PIRANHA = pygame.image.load(SPRITE_PIRANHA_PATH) if os.path.exists(SPRITE_PIRANHA_PATH) else pygame.Surface((20, 20))
+
 # --- Configurable Mario Start VLINE ---
+MARIO_SIZE = 32
+STAR_SIZE = 32
 MARIO_START_VLINE = 0  # 0 = VLINE 1, 1 = VLINE 2, etc.
 VLINE_STAR = 4  # 1-based index for user, will convert to 0-based
 RANDOMIZE_STAR_LOCATION = False
@@ -55,8 +71,10 @@ ABOUT_TO_DIE = 1
 ABOUT_TO_WIN = 0
 DIST_NEXT_PATH = 0
 SEC_ALIVE = 0.00
+TIME_TO_WIN = None
 start_time = 0.0
-used_paths = set()  # Track used paths for sliding
+used_webs = set()  # Track used webs for sliding
+websAmount = 0
 
 
 def play_music():
@@ -66,10 +84,11 @@ def play_music():
 
 
 def reset_game():
-    global lines_x, mario_x, mario_y, mario_sliding, pipes, drawing, start_point, paths
-    global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR
+    global lines_x, mario_x, mario_y, mario_sliding, pipes, drawing, start_point, webs
+    global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR, websAmount, TIME_TO_WIN
     play_music()
     lines_x = [LINE_SPACING * (i + 1) for i in range(LINE_COUNT)]
+
     # Randomize star location if enabled
     if RANDOMIZE_STAR_LOCATION:
         import random
@@ -90,10 +109,12 @@ def reset_game():
         pipes.append((rect, color))
     drawing = False
     start_point = None
-    paths = []
+    webs = []
     game_over = False
     start_time = time.time()
     SEC_ALIVE = 0.00
+    websAmount = 0
+    TIME_TO_WIN = None
 
 
 reset_game()
@@ -139,14 +160,15 @@ while running:
                             direction = 1 if end_point[1] > start_point[1] else -1
                             end_point = (end_point[0], start_point[1] + direction * MAX_PATH_LENGTH)
                         valid = True
-                        for existing_start, existing_end in paths:
+                        for existing_start, existing_end in webs:
                             sy1, sy2 = sorted([existing_start[1], existing_end[1]])
                             ey1, ey2 = sorted([start_point[1], end_point[1]])
                             if (sy1 <= ey2 and ey1 <= sy2) and (existing_start[0] in (start_point[0], end_point[0]) or existing_end[0] in (start_point[0], end_point[0])):
                                 valid = False
                                 break
                         if valid:
-                            paths.append((start_point, end_point))
+                            webs.append((start_point, end_point))
+                            websAmount += 1
                             if snap_sound:
                                 snap_sound.play()
             drawing = False
@@ -172,50 +194,58 @@ while running:
             mario_vline_idx = None
 
         # --- ABOUT_TO_DIE and ABOUT_TO_WIN logic ---
-        path_below = False
-        min_path_y = None
-        next_path_dist = None
+        web_below = False
+        min_web_y = None
+        next_web_dist = None
         if mario_vline_idx is not None:
-            for start, end in paths:
-                if start[0] == end[0]:
-                    continue
-                # Only consider paths on Mario's VLINE
-                if (start[0] == lines_x[mario_vline_idx] or end[0] == lines_x[mario_vline_idx]):
-                    path_y = start[1]
-                    if path_y > mario_y + MARIO_SIZE // 2:
-                        path_below = True
-                        dist = path_y - (mario_y + MARIO_SIZE // 2)
-                        if next_path_dist is None or dist < next_path_dist:
-                            next_path_dist = dist
-                        if min_path_y is None or path_y < min_path_y:
-                            min_path_y = path_y
-        if path_below:
+            mario_cx = mario_x + MARIO_SIZE // 2
+            mario_cy = mario_y + MARIO_SIZE // 2
+            for start, end in webs:
+                # Only consider webs that span across VLINEs
+                x1, y1 = start
+                x2, y2 = end
+                # Check if Mario's X is between the web's endpoints (inclusive)
+                if min(x1, x2) <= mario_cx <= max(x1, x2):
+                    # Calculate the Y on the web at Mario's X using linear interpolation
+                    if x1 != x2:
+                        t = (mario_cx - x1) / (x2 - x1)
+                        web_y_at_mario_x = y1 + t * (y2 - y1)
+                    else:
+                        web_y_at_mario_x = y1  # vertical web
+                    if web_y_at_mario_x > mario_cy:
+                        web_below = True
+                        dist = web_y_at_mario_x - mario_cy
+                        if next_web_dist is None or dist < next_web_dist:
+                            next_web_dist = dist
+                        if min_web_y is None or web_y_at_mario_x < min_web_y:
+                            min_web_y = web_y_at_mario_x
+        if web_below:
             ABOUT_TO_DIE = 0
         if mario_sliding:
             ABOUT_TO_DIE = 0
         star_idx = VLINE_STAR - 1
         if mario_vline_idx == star_idx:
             ABOUT_TO_DIE = 0
-            max_path_y = -1
-            for start, end in paths:
+            max_web_y = -1
+            for start, end in webs:
                 if (start[0] == lines_x[star_idx] or end[0] == lines_x[star_idx]):
-                    path_y = start[1]
-                    if path_y > max_path_y:
-                        max_path_y = path_y
-            if mario_y + MARIO_SIZE // 2 > max_path_y:
+                    web_y = start[1]
+                    if web_y > max_web_y:
+                        max_web_y = web_y
+            if mario_y + MARIO_SIZE // 2 > max_web_y:
                 ABOUT_TO_WIN = 1
-        if path_below and mario_vline_idx == star_idx:
+        if web_below and mario_vline_idx == star_idx:
             ABOUT_TO_WIN = 0
-        # --- DIST_NEXT_PATH logic ---
-        if next_path_dist is not None:
-            DIST_NEXT_PATH = int(next_path_dist)
+        # --- DIST_NEXT_WEB logic ---
+        if next_web_dist is not None:
+            DIST_NEXT_WEB = int(next_web_dist)
         else:
-            # If Mario is below all paths on his VLINE, set to -1
-            DIST_NEXT_PATH = -1
-        # --- Used paths logic ---
+            # If Mario is below all webs on his VLINE, set to -1
+            DIST_NEXT_WEB = -1
+        # --- Used webs logic ---
         if mario_y <= 0:
-            used_paths.clear()
-        # --- Smooth sliding logic with used paths ---
+            used_webs.clear()
+        # --- Smooth sliding logic with used webs ---
         if mario_sliding:
             dx = slide_target[0] - mario_x
             dy = slide_target[1] - mario_y
@@ -231,26 +261,32 @@ while running:
                 mario_y += step_y
         else:
             hopped = False
-            for start, end in paths:
-                path_id = tuple(sorted([start, end]))
-                for px, py in [start, end]:
-                    if (
-                        abs(mario_center_x - px) < MARIO_SIZE // 2 and
-                        abs((mario_y + MARIO_SIZE // 2) - py) < MARIO_SPEED and
-                        path_id not in used_paths
-                    ):
-                        other = end if (px, py) == start else start
+            mario_cx = mario_x + MARIO_SIZE // 2
+            mario_cy = mario_y + MARIO_SIZE // 2
+            for start, end in webs:
+                web_id = tuple(sorted([start, end]))
+                x1, y1 = start
+                x2, y2 = end
+                # Check if Mario's center is close to the web segment
+                if min(x1, x2) <= mario_cx <= max(x1, x2):
+                    # Linear interpolation to get the Y at Mario's X
+                    if x1 != x2:
+                        t = (mario_cx - x1) / (x2 - x1)
+                        web_y_at_mario_x = y1 + t * (y2 - y1)
+                    else:
+                        web_y_at_mario_x = y1
+                    if abs(mario_cy - web_y_at_mario_x) < MARIO_SPEED and web_id not in used_webs:
+                        # Slide to the other end
+                        other = end if abs((mario_cx, mario_cy)[0] - x1) < 1 and abs((mario_cx, mario_cy)[1] - y1) < 1 else start
                         slide_target = (other[0] - MARIO_SIZE // 2, other[1] - MARIO_SIZE // 2)
                         mario_sliding = True
-                        used_paths.add(path_id)
+                        used_webs.add(web_id)
                         if pop_sound: pop_sound.play()
                         hopped = True
                         break
-                if hopped:
-                    break
             if not hopped:
                 mario_y += MARIO_SPEED
-        # --- Death check: if Mario falls past the last path and not on a VLINE with a path, he dies ---
+        # --- Death check: if Mario falls past the last web and not on a VLINE with a web, he dies ---
         if mario_y + MARIO_SIZE >= PIPE_Y:
             # If not on star, it's a loss
             star_x = lines_x[VLINE_STAR - 1]
@@ -259,6 +295,7 @@ while running:
                     if color == (255, 255, 0) and rect.top - mario_y < 5:
                         if win_sound: win_sound.play()
                         game_over = True
+                        TIME_TO_WIN = SEC_ALIVE
             else:
                 if scream_sound: scream_sound.play()
                 game_over = True
@@ -268,7 +305,7 @@ while running:
     for x in lines_x:
         pygame.draw.line(screen, (255, 255, 255), (x, 0), (x, WINDOW_HEIGHT), 2)
 
-    for start, end in paths:
+    for start, end in webs:
         pygame.draw.line(screen, (0, 255, 255), start, end, 3)
 
     if drawing and start_point:
@@ -281,7 +318,7 @@ while running:
     for rect, color in pipes:
         pygame.draw.rect(screen, color, rect)
 
-    pygame.draw.rect(screen, (255, 0, 0), (mario_x, mario_y, MARIO_SIZE, MARIO_SIZE))
+    screen.blit(SPRITE_MARIO, (mario_x, mario_y))
 
     font = pygame.font.SysFont(None, 20)
     debug = [
@@ -289,12 +326,14 @@ while running:
         f"VLINE_2 = {VLINE_STATE[1]}",
         f"VLINE_3 = {VLINE_STATE[2]}",
         f"VLINE_4 = {VLINE_STATE[3]}",
-        f"PATH = {PATH}",
+        f"onWeb = {1 if mario_sliding else 0}",
+        f"DIST_NEXT_WEB = {DIST_NEXT_WEB}",
+        f"websAmount = {websAmount}",
         f"VLINE_PERCENTAGE = {VLINE_PERCENTAGE} pixels",
         f"ABOUT_TO_DIE = {ABOUT_TO_DIE}",
         f"ABOUT_TO_WIN = {ABOUT_TO_WIN}",
-        f"DIST_NEXT_PATH = {DIST_NEXT_PATH}%",
-        f"SEC_ALIVE = {SEC_ALIVE:.2f}"
+        f"SEC_ALIVE = {SEC_ALIVE:.2f}",
+        f"TIME_TO_WIN = {TIME_TO_WIN if TIME_TO_WIN is not None else 0}"
     ]
     for i, txt in enumerate(debug):
         render = font.render(txt, True, (255, 255, 255))
