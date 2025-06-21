@@ -66,6 +66,7 @@ draw_sound = pygame.mixer.Sound(DRAW_SOUND_PATH) if os.path.exists(DRAW_SOUND_PA
 snap_sound = pygame.mixer.Sound(SNAP_SOUND_PATH) if os.path.exists(SNAP_SOUND_PATH) else None
 pop_sound = pygame.mixer.Sound(POP_SOUND_PATH) if os.path.exists(POP_SOUND_PATH) else None
 speedup_sound = pygame.mixer.Sound(SPEEDUP_SOUND_PATH) if os.path.exists(SPEEDUP_SOUND_PATH) else None
+error_sound = pygame.mixer.Sound(SOUNDS_FOLDER + "error.wav") if os.path.exists(SOUNDS_FOLDER + "error.wav") else None
 
 # --- Setup ---
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -89,6 +90,7 @@ wonGames = 0  # Track number of games won
 waiting_for_win_sound = False  # Track if waiting for win sound to finish
 win_sound_end_time = 0
 paused = False
+TOTAL_TIME_TO_WIN = 0.0
 
 
 def save_web_map(filename="webMap.json"):
@@ -238,10 +240,15 @@ while running:
                             direction = 1 if end_point[1] > start_point[1] else -1
                             end_point = (end_point[0], start_point[1] + direction * MAX_PATH_LENGTH)
                         valid = True
+                        # --- Flexible web overlap check: only block if any pixel is already on a web ---
                         for existing_start, existing_end in webs:
-                            sy1, sy2 = sorted([existing_start[1], existing_end[1]])
-                            ey1, ey2 = sorted([start_point[1], end_point[1]])
-                            if (sy1 <= ey2 and ey1 <= sy2) and (existing_start[0] in (start_point[0], end_point[0]) or existing_end[0] in (start_point[0], end_point[0])):
+                            # Check for pixel overlap between the new web and any existing web
+                            # Use a simple line segment intersection test
+                            def ccw(A, B, C):
+                                return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+                            def segments_intersect(A,B,C,D):
+                                return (ccw(A,C,D) != ccw(B,C,D)) and (ccw(A,B,C) != ccw(A,B,D))
+                            if segments_intersect(start_point, end_point, existing_start, existing_end):
                                 valid = False
                                 break
                         if valid:
@@ -249,6 +256,9 @@ while running:
                             websAmount += 1
                             if snap_sound:
                                 snap_sound.play()
+                        else:
+                            if error_sound:
+                                error_sound.play()
             drawing = False
             start_point = None
             if draw_sound:
@@ -395,6 +405,8 @@ while running:
                         game_over = True
                         TIME_TO_WIN = SEC_ALIVE
                         wonGames += 1
+                        # Add TIME_TO_WIN to TOTAL_TIME_TO_WIN
+                        TOTAL_TIME_TO_WIN += TIME_TO_WIN if TIME_TO_WIN is not None else 0
             else:
                 if scream_sound: scream_sound.play()
                 game_over = True
@@ -442,6 +454,7 @@ while running:
         f"ABOUT_TO_DIE = {ABOUT_TO_DIE}",
         f"ABOUT_TO_WIN = {ABOUT_TO_WIN}",
         f"TIME_TO_WIN = {TIME_TO_WIN if TIME_TO_WIN is not None else 0}",
+        f"TOTAL_TIME_TO_WIN = {TOTAL_TIME_TO_WIN:.2f}",
         f"wonGames = {wonGames}",
     ]
     for i, txt in enumerate(debug):
