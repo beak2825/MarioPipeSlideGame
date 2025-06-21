@@ -18,7 +18,9 @@ LINE_COUNT = 4
 LINE_SPACING = 80
 
 MARIO_SIZE = 20
-MARIO_SPEED = 1.1
+MARIO_SPEED_DEFAULT = 1.1
+MARIO_SPEED_FAST = MARIO_SPEED_DEFAULT * 2
+MARIO_SPEED = MARIO_SPEED_DEFAULT
 SLIDE_SPEED = 2
 
 PIPE_Y = WINDOW_HEIGHT - 40
@@ -33,6 +35,7 @@ WIN_SOUND_PATH = SOUNDS_FOLDER + "win.mp3"
 DRAW_SOUND_PATH = SOUNDS_FOLDER + "line_drawing.mp3"
 SNAP_SOUND_PATH = SOUNDS_FOLDER + "line_snap.mp3"
 POP_SOUND_PATH = SOUNDS_FOLDER + "mario_pop.mp3"
+SPEEDUP_SOUND_PATH = SOUNDS_FOLDER + "speedUp.mp3"
 
 # --- Sprites ---
 SPRITE_MARIO_PATH = SPRITES_FOLDER + "mario.png"
@@ -62,6 +65,7 @@ win_sound = pygame.mixer.Sound(WIN_SOUND_PATH) if os.path.exists(WIN_SOUND_PATH)
 draw_sound = pygame.mixer.Sound(DRAW_SOUND_PATH) if os.path.exists(DRAW_SOUND_PATH) else None
 snap_sound = pygame.mixer.Sound(SNAP_SOUND_PATH) if os.path.exists(SNAP_SOUND_PATH) else None
 pop_sound = pygame.mixer.Sound(POP_SOUND_PATH) if os.path.exists(POP_SOUND_PATH) else None
+speedup_sound = pygame.mixer.Sound(SPEEDUP_SOUND_PATH) if os.path.exists(SPEEDUP_SOUND_PATH) else None
 
 # --- Setup ---
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -151,6 +155,9 @@ def reset_game():
     if wonGames == 3: # Equivalent to rounds getting progressively harder. Also wongames being 3 means that this won't run ever again.
         webs.clear()
         load_web_map("3_Round_webMap.json")
+    elif wonGames == 5:  # After 5 wins, load a different web map
+        webs.clear()
+        load_web_map("5_Round_webMap.json")
     elif wonGames == 10:  # After 10 wins, load a different web map
         webs.clear()
         load_web_map("10_Round_webMap.json")
@@ -168,7 +175,6 @@ while running:
     clock.tick(FPS)
 
     if waiting_for_win_sound:
-        # Wait for win sound to finish, then reset game
         if time.time() >= win_sound_end_time:
             waiting_for_win_sound = False
             reset_game()
@@ -180,7 +186,6 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:
                 reset_game()
@@ -194,6 +199,15 @@ while running:
                 load_web_map("3_Round_webMap.json")
                 reset_game.skip_webs_clear = True
                 reset_game()
+            elif event.key == pygame.K_u:
+                wonGames += 1
+            elif event.key == pygame.K_SPACE:
+                MARIO_SPEED = MARIO_SPEED_FAST
+                if speedup_sound:
+                    speedup_sound.play()
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_SPACE:
+                MARIO_SPEED = MARIO_SPEED_DEFAULT
 
         if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
             mx, my = pygame.mouse.get_pos()
@@ -386,7 +400,10 @@ while running:
             star_pos = (rect.centerx - SPRITE_STAR.get_width() // 2, rect.centery - SPRITE_STAR.get_height() // 2)
             screen.blit(SPRITE_STAR, star_pos)
         else:
-            pygame.draw.rect(screen, color, rect)
+            # is a piranha plant pipe
+            # Center the pipe image in the same way as the star
+            pipe_pos = (rect.centerx - SPRITE_PIPE.get_width() // 2, rect.centery - SPRITE_PIPE.get_height() // 2)
+            screen.blit(SPRITE_PIPE, pipe_pos)
 
     screen.blit(SPRITE_MARIO, (mario_x, mario_y))
 
@@ -413,9 +430,12 @@ while running:
 
     # --- User Notes (lower right, visually distinct, non-blocking) ---
     notes = [
+        "SPACE to speed up Mario.",
         "Press K to save your spider-webs.",
         "Press L to load your saved spider-web map.",
         "Press J to load the 3RD Round Map.",
+        "Press R to reset the game.",
+        "Press U to increase wonGames (for testing).",
     ]
     note_font = pygame.font.SysFont(None, 20, bold=True)
     note_color = (180, 220, 255)
