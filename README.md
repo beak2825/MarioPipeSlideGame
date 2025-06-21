@@ -5,6 +5,16 @@
 You may download the repository using the github download as zip button.
 Open the python file called 'main.py'
 
+  **Controls**
+    MAIN: Use mouse to draw webs from line to line, mario slides over.
+    R to reset the rounds.
+    P to pause game.
+    Space to speed up Mario.
+    K: save the web map layout.
+    L: load the saved map layout.
+    
+    
+
 **Dependencies:**
 
 
@@ -12,6 +22,8 @@ Open the python file called 'main.py'
 
     python3 -m pip install -U pygame==2.6.0
   python 3.10.0
+
+
 
 Completely comes with built-in music and sound FX!
 
