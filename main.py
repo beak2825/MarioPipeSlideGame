@@ -42,7 +42,7 @@ SPRITE_MARIO_PATH = SPRITES_FOLDER + "mario.png"
 SPRITE_STAR_PATH = SPRITES_FOLDER + "star.png"
 SPRITE_PIPE_PATH = SPRITES_FOLDER + "pipe.png"
 SPRITE_PIRANHA_PATH = SPRITES_FOLDER + "piranha.png"
-
+SPRITE_BG_PATH = SPRITES_FOLDER + "bg.png"
 
 
 # --- Configurable Mario Start VLINE ---
@@ -91,6 +91,14 @@ waiting_for_win_sound = False  # Track if waiting for win sound to finish
 win_sound_end_time = 0
 paused = False
 TOTAL_TIME_TO_WIN = 0.0
+
+
+# --- Background Config ---
+BG_WIDTH = 900  # You can adjust this
+BG_HEIGHT = 700  # You can adjust this
+BG_SCALE = 1.0  # You can adjust this (1.0 = no scale, >1 = bigger)
+
+SPRITE_BG = pygame.image.load(SPRITE_BG_PATH) if os.path.exists(SPRITE_BG_PATH) else pygame.Surface((BG_WIDTH, BG_HEIGHT))
 
 
 def save_web_map(filename="webMap.json"):
@@ -415,6 +423,10 @@ while running:
 
     screen.fill((0, 0, 0))
 
+    # --- Draw background ---
+    bg_scaled = pygame.transform.scale(SPRITE_BG, (int(BG_WIDTH * BG_SCALE), int(BG_HEIGHT * BG_SCALE)))
+    screen.blit(bg_scaled, (-int((BG_WIDTH * BG_SCALE - WINDOW_WIDTH) // 2), -int((BG_HEIGHT * BG_SCALE - WINDOW_HEIGHT) // 2)))
+
     for x in lines_x:
         pygame.draw.line(screen, (255, 255, 255), (x, 0), (x, WINDOW_HEIGHT), 2)
 
@@ -467,7 +479,7 @@ while running:
     notes = [
         "SPACE to speed up Mario.",
         "Press P to pause the game.",
-        "Press K to save your spider-webs.",
+        "Press K to save your spider-web layout.",
         "Press L to load your saved spider-web map.",
         "Press J to load the 3RD Round Map.",
         "Press R to reset the game.",
