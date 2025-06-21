@@ -80,6 +80,11 @@ start_time = 0.0
 used_webs = set()  # Track used webs for sliding
 websAmount = 0
 STAR_IDX = None  # 0-based index for star sprite location
+wonGames = 0  # Track number of games won
+waiting_for_win_sound = False  # Track if waiting for win sound to finish
+win_sound_end_time = 0
+totalWinTime = 0.0  # Sum of all TIME_TO_WIN values
+game_paused = False  # Pause state
 
 
 def play_music():
@@ -91,33 +96,35 @@ def play_music():
 def reset_game():
     global lines_x, mario_x, mario_y, mario_sliding, pipes, drawing, start_point, webs
     global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR, websAmount, TIME_TO_WIN
-    global STAR_IDX  # Add a variable for the star sprite location
+    global STAR_IDX, waiting_for_win_sound, win_sound_end_time, wonGames, totalWinTime, game_paused
     play_music()
     lines_x = [LINE_SPACING * (i + 1) for i in range(LINE_COUNT)]
 
-    # Always randomize both VLINE_STAR (win line) and STAR_IDX (sprite location) on every reset
     VLINE_STAR = random.randint(1, LINE_COUNT)  # 1-based index for win VLINE
     STAR_IDX = VLINE_STAR - 1  # Star sprite always matches the win VLINE
-
-    mario_x = lines_x[MARIO_START_VLINE] - MARIO_SIZE // 2
+    mario_x = lines_x[random.randint(0, LINE_COUNT - 1)] - MARIO_SIZE // 2  # Random VLINE for Mario
     mario_y = 0
     mario_sliding = False
     slide_target = None
     prev_path = None
     pipes = []
     for i, x in enumerate(lines_x):
-        # Place star sprite at STAR_IDX, piranha at others
         color = (255, 255, 0) if i == STAR_IDX else (0, 255, 0)
         rect = pygame.Rect(x - 10, PIPE_Y, 20, 20)
         pipes.append((rect, color))
     drawing = False
     start_point = None
-    webs = []
+    # Only clear webs if less than 3 wins
+    if wonGames < 3:
+        webs = []
     game_over = False
     start_time = time.time()
     SEC_ALIVE = 0.00
     websAmount = 0
     TIME_TO_WIN = None
+    waiting_for_win_sound = False
+    win_sound_end_time = 0
+    game_paused = False
 
 
 
@@ -126,6 +133,31 @@ reset_game()
 running = True
 while running:
     clock.tick(FPS)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                reset_game()
+            if event.key == pygame.K_p:
+                game_paused = not game_paused
+
+    if game_paused:
+        # Draw pause overlay
+        screen.fill((0, 0, 0))
+        font = pygame.font.SysFont(None, 60)
+        pause_text = font.render("PAUSED", True, (255, 255, 0))
+        screen.blit(pause_text, (WINDOW_WIDTH // 2 - pause_text.get_width() // 2, WINDOW_HEIGHT // 2 - pause_text.get_height() // 2))
+        pygame.display.flip()
+        continue
+
+    if waiting_for_win_sound:
+        # Wait for win sound to finish, then reset game
+        if time.time() >= win_sound_end_time:
+            waiting_for_win_sound = False
+            reset_game()
+        continue
 
     if not game_over:
         SEC_ALIVE = round(time.time() - start_time, 2)
@@ -137,6 +169,8 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:
                 reset_game()
+            if event.key == pygame.K_p:
+                paused = not paused
 
         if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
             mx, my = pygame.mouse.get_pos()
@@ -297,9 +331,15 @@ while running:
             if abs(mario_center_x - star_x) < 5:
                 for rect, color in pipes:
                     if color == (255, 255, 0) and rect.top - mario_y < 5:
-                        if win_sound: win_sound.play()
+                        if win_sound:
+                            win_sound.play()
+                            waiting_for_win_sound = True
+                            win_sound_end_time = time.time() + win_sound.get_length()
                         game_over = True
                         TIME_TO_WIN = SEC_ALIVE
+                        wonGames += 1
+                        if TIME_TO_WIN is not None:
+                            totalWinTime += TIME_TO_WIN
             else:
                 if scream_sound: scream_sound.play()
                 game_over = True
@@ -343,7 +383,9 @@ while running:
         f"ABOUT_TO_DIE = {ABOUT_TO_DIE}",
         f"ABOUT_TO_WIN = {ABOUT_TO_WIN}",
         f"SEC_ALIVE = {SEC_ALIVE:.2f}",
-        f"TIME_TO_WIN = {TIME_TO_WIN if TIME_TO_WIN is not None else 0}"
+        f"TIME_TO_WIN = {TIME_TO_WIN if TIME_TO_WIN is not None else 0}",
+        f"wonGames = {wonGames}",
+        f"totalWinTime = {totalWinTime:.2f}",
     ]
     for i, txt in enumerate(debug):
         render = font.render(txt, True, (255, 255, 255))
