@@ -131,7 +131,7 @@ def play_music():
 
 def reset_game():
     global lines_x, mario_x, mario_y, mario_sliding, pipes, drawing, start_point, webs
-    global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR, websAmount, TIME_TO_WIN
+    global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR, websAmount, TIME_TO_WIN, TOTAL_TIME_TO_WIN
     global STAR_IDX, waiting_for_win_sound, win_sound_end_time
     if 'webs' not in globals():
         webs = []
@@ -202,8 +202,10 @@ while running:
                 paused = not paused
             if event.key == pygame.K_r:
                 wonGames = 0
+                TOTAL_TIME_TO_WIN = 0.0
                 reset_game()
                 wonGames = 0 # double reset to ensure wonGames is reset.
+                TOTAL_TIME_TO_WIN = 0.0
             elif event.key == pygame.K_k:
                 save_web_map("webMap.json")
             elif event.key == pygame.K_l:
