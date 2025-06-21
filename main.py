@@ -362,6 +362,8 @@ while running:
                 mario_x = slide_target[0]
                 mario_y = slide_target[1]
                 mario_sliding = False
+                if pop_sound: # avoid crash
+                    pop_sound.play()  # Play pop sound when Mario gets off the web
             else:
                 step_x = MARIO_SPEED * (dx / dist)
                 step_y = MARIO_SPEED * (dy / dist)
