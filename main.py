@@ -85,6 +85,7 @@ waiting_for_win_sound = False  # Track if waiting for win sound to finish
 win_sound_end_time = 0
 totalWinTime = 0.0  # Sum of all TIME_TO_WIN values
 game_paused = False  # Pause state
+webs = []  # Always define webs as a list
 
 
 def play_music():
@@ -115,6 +116,9 @@ def reset_game():
     drawing = False
     start_point = None
     # Only clear webs if less than 3 wins
+    global webs
+    if 'webs' not in globals() or webs is None:
+        webs = []
     if wonGames < 3:
         webs = []
     game_over = False
@@ -144,13 +148,48 @@ while running:
                 game_paused = not game_paused
 
     if game_paused:
-        # Draw pause overlay
+        # Draw pause overlay ON TOP of the current game state
+        pause_sound_path = SOUNDS_FOLDER + "pause.mp3"
+        if os.path.exists(pause_sound_path):
+            if not pygame.mixer.music.get_busy() or pygame.mixer.music.get_pos() == -1 or pygame.mixer.music.get_pos() == 0:
+                pygame.mixer.music.load(pause_sound_path)
+                pygame.mixer.music.play(-1)
+        # Draw the current game state as usual, then overlay PAUSED
         screen.fill((0, 0, 0))
+        for x in lines_x:
+            pygame.draw.line(screen, (255, 255, 255), (x, 0), (x, WINDOW_HEIGHT), 2)
+        if 'webs' in globals() and webs is not None:
+            for start, end in webs:
+                pygame.draw.line(screen, (0, 255, 255), start, end, 3)
+        if drawing and start_point:
+            mx, my = pygame.mouse.get_pos()
+            nearest_x = min(lines_x, key=lambda x: abs(mx - x))
+            if abs(mx - nearest_x) < 15:
+                snapped_y = round(my / 10) * 10
+                pygame.draw.line(screen, (0, 128, 255), start_point, (nearest_x, snapped_y), 2)
+        for i, (rect, color) in enumerate(pipes):
+            if i == STAR_IDX:
+                star_pos = (rect.centerx - SPRITE_STAR.get_width() // 2, rect.centery - SPRITE_STAR.get_height() // 2)
+                screen.blit(SPRITE_STAR, star_pos)
+            else:
+                pygame.draw.rect(screen, color, rect)
+        screen.blit(SPRITE_MARIO, (mario_x, mario_y))
+        font = pygame.font.SysFont(None, 20)
+        for i, txt in enumerate(debug):
+            render = font.render(txt, True, (255, 255, 255))
+            screen.blit(render, (420, 10 + i * 20))
+        # Overlay PAUSED text
         font = pygame.font.SysFont(None, 60)
         pause_text = font.render("PAUSED", True, (255, 255, 0))
         screen.blit(pause_text, (WINDOW_WIDTH // 2 - pause_text.get_width() // 2, WINDOW_HEIGHT // 2 - pause_text.get_height() // 2))
         pygame.display.flip()
         continue
+    else:
+        # Resume main music if paused
+        if os.path.exists(MAIN_MUSIC):
+            if not pygame.mixer.music.get_busy() or pygame.mixer.music.get_pos() == -1:
+                pygame.mixer.music.load(MAIN_MUSIC)
+                pygame.mixer.music.play(-1)
 
     if waiting_for_win_sound:
         # Wait for win sound to finish, then reset game
