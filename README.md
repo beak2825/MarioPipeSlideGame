@@ -3,7 +3,7 @@
 **Dependencies:**
 
 
-  pygame version 2.1.6 > https://pypi.org/project/pygame/
+  pygame version 2.1.6 > [https://pypi.org/project/pygame/]
 
   
     pygame has it's own dependencies listed at https://pypi.org/project/pygame/
@@ -15,7 +15,7 @@ This project was really made to create a first NEAT AI neural network, to come u
 The best part is, no one has ever recreated this minigame before! It's all opensource and easy to modify!
 And I've never really made any sort of game, all I am is a security researcher.
 
-Have any suggestions or ideas please add comments or make a pull request.
+Have any suggestions or ideas please go to [discussions](https://github.com/beak2825/MarioPipeSlideGame/discussions) or make a pull request with working code.
 
 Completely comes with built-in music and sound FX!
 
