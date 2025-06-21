@@ -3,6 +3,7 @@ import sys
 import os
 import math
 import time
+import random
 
 # --- Init ---
 pygame.init()
@@ -44,7 +45,7 @@ SPRITE_PIRANHA_PATH = SPRITES_FOLDER + "piranha.png"
 MARIO_SIZE = 32
 STAR_SIZE = 16
 MARIO_START_VLINE = 0  # 0 = VLINE 1, 1 = VLINE 2, etc.
-VLINE_STAR = 4  # 1-based index for user, will convert to 0-based
+VLINE_STAR = None # 1-based index for user, will convert to 0-based
 RANDOMIZE_STAR_LOCATION = False
 
 
@@ -78,6 +79,7 @@ TIME_TO_WIN = None
 start_time = 0.0
 used_webs = set()  # Track used webs for sliding
 websAmount = 0
+STAR_IDX = None  # 0-based index for star sprite location
 
 
 def play_music():
@@ -89,16 +91,14 @@ def play_music():
 def reset_game():
     global lines_x, mario_x, mario_y, mario_sliding, pipes, drawing, start_point, webs
     global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR, websAmount, TIME_TO_WIN
+    global STAR_IDX  # Add a variable for the star sprite location
     play_music()
     lines_x = [LINE_SPACING * (i + 1) for i in range(LINE_COUNT)]
 
-    # Randomize star location if enabled
-    if RANDOMIZE_STAR_LOCATION:
-        import random
-        star_idx = random.randint(0, LINE_COUNT - 1)
-        VLINE_STAR = star_idx + 1
-    else:
-        star_idx = VLINE_STAR - 1
+    # Always randomize both VLINE_STAR (win line) and STAR_IDX (sprite location) on every reset
+    VLINE_STAR = random.randint(1, LINE_COUNT)  # 1-based index for win VLINE
+    STAR_IDX = VLINE_STAR - 1  # Star sprite always matches the win VLINE
+
     mario_x = lines_x[MARIO_START_VLINE] - MARIO_SIZE // 2
     mario_y = 0
     mario_sliding = False
@@ -106,8 +106,8 @@ def reset_game():
     prev_path = None
     pipes = []
     for i, x in enumerate(lines_x):
-        # Place star at VLINE_STAR, piranha at others
-        color = (255, 255, 0) if i == star_idx else (0, 255, 0)
+        # Place star sprite at STAR_IDX, piranha at others
+        color = (255, 255, 0) if i == STAR_IDX else (0, 255, 0)
         rect = pygame.Rect(x - 10, PIPE_Y, 20, 20)
         pipes.append((rect, color))
     drawing = False
@@ -118,6 +118,7 @@ def reset_game():
     SEC_ALIVE = 0.00
     websAmount = 0
     TIME_TO_WIN = None
+
 
 
 reset_game()
@@ -319,9 +320,9 @@ while running:
             pygame.draw.line(screen, (0, 128, 255), start_point, (nearest_x, snapped_y), 2)
 
     for i, (rect, color) in enumerate(pipes):
-        if color == (255, 255, 0):  # Star
+        if i == STAR_IDX:
             # Center the star image in the actual square (rect)
-            star_pos = (rect.x + rect.width // 2 - STAR_SIZE // 2, rect.y + rect.height // 2 - STAR_SIZE // 2)
+            star_pos = (rect.centerx - SPRITE_STAR.get_width() // 2, rect.centery - SPRITE_STAR.get_height() // 2)
             screen.blit(SPRITE_STAR, star_pos)
         else:
             pygame.draw.rect(screen, color, rect)
