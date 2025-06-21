@@ -112,7 +112,6 @@ def reset_game():
         pipes.append((rect, color))
     drawing = False
     start_point = None
-    webs = []
     game_over = False
     start_time = time.time()
     SEC_ALIVE = 0.00
@@ -120,6 +119,10 @@ def reset_game():
     TIME_TO_WIN = None
     waiting_for_win_sound = False
     win_sound_end_time = 0
+    # Only clear webs if less than 3 wins
+    if wonGames < 3:
+        webs = []
+    # After 3 wins, do NOT clear webs, so they persist
 
 
 
@@ -236,7 +239,7 @@ while running:
             ABOUT_TO_DIE = 0
         if mario_sliding:
             ABOUT_TO_DIE = 0
-        star_idx = VLINE_STAR - 1
+        star_idx = (VLINE_STAR - 1) if VLINE_STAR is not None else 0
         if mario_vline_idx == star_idx:
             ABOUT_TO_DIE = 0
             max_web_y = -1
@@ -302,7 +305,7 @@ while running:
         # --- Death check: if Mario falls past the last web and not on a VLINE with a web, he dies ---
         if mario_y + MARIO_SIZE >= PIPE_Y:
             # If not on star, it's a loss
-            star_x = lines_x[VLINE_STAR - 1]
+            star_x = lines_x[(VLINE_STAR - 1) if VLINE_STAR is not None else 0]
             if abs(mario_center_x - star_x) < 5:
                 for rect, color in pipes:
                     if color == (255, 255, 0) and rect.top - mario_y < 5:
