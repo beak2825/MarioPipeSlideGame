@@ -88,6 +88,7 @@ STAR_IDX = None  # 0-based index for star sprite location
 wonGames = 0  # Track number of games won
 waiting_for_win_sound = False  # Track if waiting for win sound to finish
 win_sound_end_time = 0
+paused = False
 
 
 def save_web_map(filename="webMap.json"):
@@ -187,6 +188,8 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_p:
+                paused = not paused
             if event.key == pygame.K_r:
                 reset_game()
             elif event.key == pygame.K_k:
@@ -250,6 +253,14 @@ while running:
             start_point = None
             if draw_sound:
                 draw_sound.stop()
+
+    if paused:
+        pause_font = pygame.font.SysFont(None, 80, bold=True)
+        pause_text = pause_font.render("PAUSED", True, (255, 255, 0))
+        pause_rect = pause_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2))
+        screen.blit(pause_text, pause_rect)
+        pygame.display.flip()
+        continue
 
     if not game_over:
         mario_center_x = mario_x + MARIO_SIZE // 2
