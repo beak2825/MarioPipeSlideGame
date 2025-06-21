@@ -422,6 +422,31 @@ while running:
             else:
                 if scream_sound: scream_sound.play()
                 game_over = True
+                # --- Save highscore on death ---
+                import datetime
+                highscore_entry = {
+                    "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "wonGames": wonGames,
+                    "TOTAL_TIME_TO_WIN": round(TOTAL_TIME_TO_WIN, 2)
+                }
+                try:
+                    if os.path.exists("highscore.json"):
+                        with open("highscore.json", "r") as f:
+                            try:
+                                content = f.read().strip()
+                                if not content:
+                                    highscores = []
+                                else:
+                                    highscores = json.loads(content)
+                            except Exception:
+                                highscores = []
+                    else:
+                        highscores = []
+                    highscores.append(highscore_entry)
+                    with open("highscore.json", "w") as f:
+                        json.dump(highscores, f, indent=2)
+                except Exception as e:
+                    print(f"Error saving highscore: {e}")
 
     screen.fill((0, 0, 0))
 
