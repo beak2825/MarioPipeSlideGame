@@ -19,7 +19,7 @@ LINE_SPACING = 80
 
 MARIO_SIZE = 20
 MARIO_SPEED_DEFAULT = 1.1
-MARIO_SPEED_FAST = MARIO_SPEED_DEFAULT * 4
+MARIO_SPEED_FAST = MARIO_SPEED_DEFAULT * 4.2
 MARIO_SPEED = MARIO_SPEED_DEFAULT
 SLIDE_SPEED = 2
 
@@ -29,13 +29,13 @@ MUSIC_FOLDER = "music/"
 SOUNDS_FOLDER = "sounds/"
 SPRITES_FOLDER = "sprites/"
 # --- Sound Paths ---
-MAIN_MUSIC = MUSIC_FOLDER + "slides.mp3" # Plays whole time
-SOUND_PATH = SOUNDS_FOLDER + "scream.mp3" # plays on death
-WIN_SOUND_PATH = SOUNDS_FOLDER + "win.mp3"
+MAIN_MUSIC = MUSIC_FOLDER + "slides.wav" # Plays whole time
+SOUND_PATH = SOUNDS_FOLDER + "scream.wav" # plays on death
+WIN_SOUND_PATH = SOUNDS_FOLDER + "win.wav"
 DRAW_SOUND_PATH = SOUNDS_FOLDER + "line_drawing.mp3"
-SNAP_SOUND_PATH = SOUNDS_FOLDER + "line_snap.mp3"
-POP_SOUND_PATH = SOUNDS_FOLDER + "mario_pop.mp3"
-SPEEDUP_SOUND_PATH = SOUNDS_FOLDER + "speedUp.mp3"
+SNAP_SOUND_PATH = SOUNDS_FOLDER + "line_snap.wav"
+POP_SOUND_PATH = SOUNDS_FOLDER + "mario_switch.wav"
+SPEEDUP_SOUND_PATH = SOUNDS_FOLDER + "mario_switch.wav" # figure out how to play at higher pitch with higher speed
 
 # --- Sprites ---
 SPRITE_MARIO_PATH = SPRITES_FOLDER + "mario.png"
@@ -438,11 +438,9 @@ while running:
         f"VLINE_STAR = {VLINE_STAR}",
         f"onWeb = {1 if mario_sliding else 0}",
         f"DIST_NEXT_WEB = {DIST_NEXT_WEB}",
-
-        f"VLINE_PERCENTAGE = {VLINE_PERCENTAGE} pixels",
+        f"VLINE_PIXELS_AWAY = {VLINE_PERCENTAGE} pixels",
         f"ABOUT_TO_DIE = {ABOUT_TO_DIE}",
         f"ABOUT_TO_WIN = {ABOUT_TO_WIN}",
-
         f"TIME_TO_WIN = {TIME_TO_WIN if TIME_TO_WIN is not None else 0}",
         f"wonGames = {wonGames}",
     ]
@@ -453,6 +451,7 @@ while running:
     # --- User Notes (lower right, visually distinct, non-blocking) ---
     notes = [
         "SPACE to speed up Mario.",
+        "Press P to pause the game.",
         "Press K to save your spider-webs.",
         "Press L to load your saved spider-web map.",
         "Press J to load the 3RD Round Map.",
