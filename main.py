@@ -19,7 +19,7 @@ LINE_SPACING = 80
 
 MARIO_SIZE = 20
 MARIO_SPEED_DEFAULT = 1.1
-MARIO_SPEED_FAST = MARIO_SPEED_DEFAULT * 2
+MARIO_SPEED_FAST = MARIO_SPEED_DEFAULT * 4
 MARIO_SPEED = MARIO_SPEED_DEFAULT
 SLIDE_SPEED = 2
 
@@ -338,28 +338,37 @@ while running:
             hopped = False
             mario_cx = mario_x + MARIO_SIZE // 2
             mario_cy = mario_y + MARIO_SIZE // 2
-            for start, end in webs:
-                web_id = tuple(sorted([start, end]))
-                x1, y1 = start
-                x2, y2 = end
-                # Check if Mario's center is close to the web segment
-                if min(x1, x2) <= mario_cx <= max(x1, x2):
-                    # Linear interpolation to get the Y at Mario's X
-                    if x1 != x2:
-                        t = (mario_cx - x1) / (x2 - x1)
-                        web_y_at_mario_x = y1 + t * (y2 - y1)
-                    else:
-                        web_y_at_mario_x = y1
-                    if abs(mario_cy - web_y_at_mario_x) < MARIO_SPEED and web_id not in used_webs:
-                        # Slide to the other end
-                        other = end if abs((mario_cx, mario_cy)[0] - x1) < 1 and abs((mario_cx, mario_cy)[1] - y1) < 1 else start
-                        slide_target = (other[0] - MARIO_SIZE // 2, other[1] - MARIO_SIZE // 2)
-                        mario_sliding = True
-                        used_webs.add(web_id)
-                        if pop_sound: pop_sound.play()
-                        hopped = True
-                        break
-            if not hopped:
+            # --- Improved web detection for high speed ---
+            web_hopped_this_frame = False
+            if DIST_NEXT_WEB != -1 and ABOUT_TO_DIE == 0 and ABOUT_TO_WIN == 0:
+                next_cy = mario_cy + MARIO_SPEED
+                for start, end in webs:
+                    web_id = tuple(sorted([start, end]))
+                    x1, y1 = start
+                    x2, y2 = end
+                    if min(x1, x2) - 1 <= mario_cx <= max(x1, x2) + 1:
+                        dx, dy = x2 - x1, y2 - y1
+                        if dx == dy == 0:
+                            continue
+                        t = max(0, min(1, ((mario_cx - x1) * dx + (mario_cy - y1) * dy) / (dx * dx + dy * dy)))
+                        px, py = x1 + t * dx, y1 + t * dy
+                        distance = math.hypot(mario_cx - px, mario_cy - py)
+                        # --- Symmetric web detection: allow hopping from either endpoint ---
+                        if distance < MARIO_SPEED + MARIO_SIZE / 4 and web_id not in used_webs:
+                            # Always slide to the endpoint that is NOT closest to Mario's current position
+                            if math.hypot(mario_cx - x1, mario_cy - y1) < math.hypot(mario_cx - x2, mario_cy - y2):
+                                target = end
+                            else:
+                                target = start
+                            slide_target = (target[0] - MARIO_SIZE // 2, target[1] - MARIO_SIZE // 2)
+                            mario_sliding = True
+                            used_webs.add(web_id)
+                            if pop_sound: pop_sound.play()
+                            hopped = True
+                            web_hopped_this_frame = True
+                            break
+
+            if not hopped and not web_hopped_this_frame:
                 mario_y += MARIO_SPEED
         # --- Death check: if Mario falls past the last web and not on a VLINE with a web, he dies ---
         if mario_y + MARIO_SIZE >= PIPE_Y:
