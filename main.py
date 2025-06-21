@@ -429,6 +429,8 @@ while running:
 
     font = pygame.font.SysFont(None, 20)
     debug = [
+        f"SEC_ALIVE = {SEC_ALIVE:.2f}",
+        f"websAmount = {websAmount}",
         f"VLINE_1 = {VLINE_STATE[0]}",
         f"VLINE_2 = {VLINE_STATE[1]}",
         f"VLINE_3 = {VLINE_STATE[2]}",
@@ -436,11 +438,11 @@ while running:
         f"VLINE_STAR = {VLINE_STAR}",
         f"onWeb = {1 if mario_sliding else 0}",
         f"DIST_NEXT_WEB = {DIST_NEXT_WEB}",
-        f"websAmount = {websAmount}",
+
         f"VLINE_PERCENTAGE = {VLINE_PERCENTAGE} pixels",
         f"ABOUT_TO_DIE = {ABOUT_TO_DIE}",
         f"ABOUT_TO_WIN = {ABOUT_TO_WIN}",
-        f"SEC_ALIVE = {SEC_ALIVE:.2f}",
+
         f"TIME_TO_WIN = {TIME_TO_WIN if TIME_TO_WIN is not None else 0}",
         f"wonGames = {wonGames}",
     ]
