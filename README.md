@@ -11,6 +11,8 @@
 
 
 Not all of my ideas are fully set in place just yet, I've created all of this up to this commit in 10 Hours!
+This project was really made to create a first NEAT AI neural network, to come up with the best strategies to this game.
+The best part is, no one has ever recreated this minigame before! It's all opensource and easy to modify!
 And I've never really made any sort of game, all I am is a security researcher.
 
 Have any suggestions or ideas please add comments or make a pull request.
