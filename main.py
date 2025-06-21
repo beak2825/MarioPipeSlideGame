@@ -193,7 +193,9 @@ while running:
             if event.key == pygame.K_p:
                 paused = not paused
             if event.key == pygame.K_r:
+                wonGames = 0
                 reset_game()
+                wonGames = 0 # double reset to ensure wonGames is reset.
             elif event.key == pygame.K_k:
                 save_web_map("webMap.json")
             elif event.key == pygame.K_l:
