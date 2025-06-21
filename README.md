@@ -8,10 +8,9 @@ Open the python file called 'main.py'
 **Dependencies:**
 
 
-  pygame version 2.1.6 > [https://pypi.org/project/pygame/]
+  pygame has it's own dependencies listed at https://pypi.org/project/pygame/
 
-  
-    pygame has it's own dependencies listed at https://pypi.org/project/pygame/
+    python3 -m pip install -U pygame==2.6.0
   python 3.10.0
 
 Completely comes with built-in music and sound FX!
