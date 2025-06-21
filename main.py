@@ -4,6 +4,7 @@ import os
 import math
 import time
 import random
+import json
 
 # --- Init ---
 pygame.init()
@@ -85,6 +86,28 @@ waiting_for_win_sound = False  # Track if waiting for win sound to finish
 win_sound_end_time = 0
 
 
+def save_web_map(filename="webMap.json"):
+    try:
+        # Save as a list of [[x1, y1], [x2, y2]] for each web
+        web_list = [[list(start), list(end)] for start, end in webs]
+        with open(filename, "w") as f:
+            json.dump(web_list, f, indent=2)
+        print(f"Web map saved to {filename}")
+    except Exception as e:
+        print(f"Error saving web map: {e}")
+
+def load_web_map(filename="webMap.json"):
+    global webs, websAmount
+    try:
+        with open(filename, "r") as f:
+            web_list = json.load(f)
+        webs = [ (tuple(start), tuple(end)) for start, end in web_list ]
+        websAmount = len(webs)
+        print(f"Web map loaded from {filename}")
+    except Exception as e:
+        print(f"Error loading web map: {e}")
+
+
 def play_music():
     if os.path.exists(MAIN_MUSIC):
         pygame.mixer.music.load(MAIN_MUSIC)
@@ -95,6 +118,8 @@ def reset_game():
     global lines_x, mario_x, mario_y, mario_sliding, pipes, drawing, start_point, webs
     global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR, websAmount, TIME_TO_WIN
     global STAR_IDX, waiting_for_win_sound, win_sound_end_time
+    if 'webs' not in globals():
+        webs = []
     play_music()
     lines_x = [LINE_SPACING * (i + 1) for i in range(LINE_COUNT)]
 
@@ -115,14 +140,24 @@ def reset_game():
     game_over = False
     start_time = time.time()
     SEC_ALIVE = 0.00
-    websAmount = 0
     TIME_TO_WIN = None
     waiting_for_win_sound = False
     win_sound_end_time = 0
-    # Only clear webs if less than 3 wins
-    if wonGames < 3:
-        webs = []
+    # Only clear webs if less than 3 wins and webs was not just loaded
+    if wonGames < 3 and not getattr(reset_game, 'skip_webs_clear', False):
+        webs.clear()
+        websAmount = 0
+
+    if wonGames == 3: # Equivalent to rounds getting progressively harder. Also wongames being 3 means that this won't run ever again.
+        webs.clear()
+        load_web_map("3_Round_webMap.json")
+    elif wonGames == 10:  # After 10 wins, load a different web map
+        webs.clear()
+        load_web_map("10_Round_webMap.json")
     # After 3 wins, do NOT clear webs, so they persist
+    # Reset the skip_webs_clear flag
+    if hasattr(reset_game, 'skip_webs_clear'):
+        delattr(reset_game, 'skip_webs_clear')
 
 
 
@@ -148,6 +183,16 @@ while running:
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r:
+                reset_game()
+            elif event.key == pygame.K_k:
+                save_web_map("webMap.json")
+            elif event.key == pygame.K_l:
+                load_web_map("webMap.json")
+                reset_game.skip_webs_clear = True
+                reset_game()
+            elif event.key == pygame.K_j:
+                load_web_map("3_Round_webMap.json")
+                reset_game.skip_webs_clear = True
                 reset_game()
 
         if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
@@ -366,7 +411,23 @@ while running:
         render = font.render(txt, True, (255, 255, 255))
         screen.blit(render, (420, 10 + i * 20))
 
+    # --- User Notes (lower right, visually distinct, non-blocking) ---
+    notes = [
+        "Press K to save your spider-webs.",
+        "Press L to load your saved spider-web map.",
+        "Press J to load the 3RD Round Map.",
+    ]
+    note_font = pygame.font.SysFont(None, 20, bold=True)
+    note_color = (180, 220, 255)
+    note_y_start = 10 + len(debug) * 20 + 60  # Many lines below debug
+    for i, note in enumerate(notes):
+        note_render = note_font.render(note, True, note_color)
+        note_rect = note_render.get_rect()
+        note_rect.topright = (WINDOW_WIDTH - 10, note_y_start + i * 24)
+        screen.blit(note_render, note_rect)
+
     pygame.display.flip()
 
 pygame.quit()
 sys.exit()
+
