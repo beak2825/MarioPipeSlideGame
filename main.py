@@ -25,8 +25,8 @@ MUSIC_FOLDER = "music/"
 SOUNDS_FOLDER = "sounds/"
 SPRITES_FOLDER = "sprites/"
 # --- Sound Paths ---
-MAIN_MUSIC = MUSIC_FOLDER + "slides.mp3"
-SOUND_PATH = SOUNDS_FOLDER + "scream.mp3"
+MAIN_MUSIC = MUSIC_FOLDER + "slides.mp3" # Plays whole time
+SOUND_PATH = SOUNDS_FOLDER + "scream.mp3" # plays on death
 WIN_SOUND_PATH = SOUNDS_FOLDER + "win.mp3"
 DRAW_SOUND_PATH = SOUNDS_FOLDER + "line_drawing.mp3"
 SNAP_SOUND_PATH = SOUNDS_FOLDER + "line_snap.mp3"
@@ -38,18 +38,21 @@ SPRITE_STAR_PATH = SPRITES_FOLDER + "star.png"
 SPRITE_PIPE_PATH = SPRITES_FOLDER + "pipe.png"
 SPRITE_PIRANHA_PATH = SPRITES_FOLDER + "piranha.png"
 
+
+
+# --- Configurable Mario Start VLINE ---
+MARIO_SIZE = 32
+STAR_SIZE = 16
+MARIO_START_VLINE = 0  # 0 = VLINE 1, 1 = VLINE 2, etc.
+VLINE_STAR = 4  # 1-based index for user, will convert to 0-based
+RANDOMIZE_STAR_LOCATION = False
+
+
 # Load images as Surfaces
 SPRITE_MARIO = pygame.image.load(SPRITE_MARIO_PATH) if os.path.exists(SPRITE_MARIO_PATH) else pygame.Surface((MARIO_SIZE, MARIO_SIZE))
 SPRITE_STAR = pygame.image.load(SPRITE_STAR_PATH) if os.path.exists(SPRITE_STAR_PATH) else pygame.Surface((STAR_SIZE, STAR_SIZE))
 SPRITE_PIPE = pygame.image.load(SPRITE_PIPE_PATH) if os.path.exists(SPRITE_PIPE_PATH) else pygame.Surface((20, 20))
 SPRITE_PIRANHA = pygame.image.load(SPRITE_PIRANHA_PATH) if os.path.exists(SPRITE_PIRANHA_PATH) else pygame.Surface((20, 20))
-
-# --- Configurable Mario Start VLINE ---
-MARIO_SIZE = 32
-STAR_SIZE = 32
-MARIO_START_VLINE = 0  # 0 = VLINE 1, 1 = VLINE 2, etc.
-VLINE_STAR = 4  # 1-based index for user, will convert to 0-based
-RANDOMIZE_STAR_LOCATION = False
 
 # --- Assets ---
 scream_sound = pygame.mixer.Sound(SOUND_PATH) if os.path.exists(SOUND_PATH) else None
@@ -315,8 +318,13 @@ while running:
             snapped_y = round(my / 10) * 10
             pygame.draw.line(screen, (0, 128, 255), start_point, (nearest_x, snapped_y), 2)
 
-    for rect, color in pipes:
-        pygame.draw.rect(screen, color, rect)
+    for i, (rect, color) in enumerate(pipes):
+        if color == (255, 255, 0):  # Star
+            # Center the star image in the actual square (rect)
+            star_pos = (rect.x + rect.width // 2 - STAR_SIZE // 2, rect.y + rect.height // 2 - STAR_SIZE // 2)
+            screen.blit(SPRITE_STAR, star_pos)
+        else:
+            pygame.draw.rect(screen, color, rect)
 
     screen.blit(SPRITE_MARIO, (mario_x, mario_y))
 
@@ -326,6 +334,7 @@ while running:
         f"VLINE_2 = {VLINE_STATE[1]}",
         f"VLINE_3 = {VLINE_STATE[2]}",
         f"VLINE_4 = {VLINE_STATE[3]}",
+        f"VLINE_STAR = {VLINE_STAR}",
         f"onWeb = {1 if mario_sliding else 0}",
         f"DIST_NEXT_WEB = {DIST_NEXT_WEB}",
         f"websAmount = {websAmount}",
