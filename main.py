@@ -19,6 +19,7 @@ LINE_SPACING = 80
 
 MARIO_SIZE = 20
 MARIO_SPEED_DEFAULT = 1.1
+MARIO_SPEED_3 = MARIO_SPEED_DEFAULT * 1.5
 MARIO_SPEED_FAST = MARIO_SPEED_DEFAULT * 4.2
 MARIO_SPEED = MARIO_SPEED_DEFAULT
 SLIDE_SPEED = 2
@@ -32,6 +33,7 @@ SPRITES_FOLDER = "sprites/"
 MAIN_MUSIC = MUSIC_FOLDER + "slides.wav" # Plays whole time
 SOUND_PATH = SOUNDS_FOLDER + "scream.wav" # plays on death
 WIN_SOUND_PATH = SOUNDS_FOLDER + "win.wav"
+MARIO_HAHA_PATH = SOUNDS_FOLDER + "mario_haha.wav" # plays on win
 DRAW_SOUND_PATH = SOUNDS_FOLDER + "line_drawing.mp3"
 SNAP_SOUND_PATH = SOUNDS_FOLDER + "line_snap.wav"
 POP_SOUND_PATH = SOUNDS_FOLDER + "mario_switch.wav"
@@ -62,6 +64,7 @@ SPRITE_PIRANHA = pygame.image.load(SPRITE_PIRANHA_PATH) if os.path.exists(SPRITE
 # --- Assets ---
 scream_sound = pygame.mixer.Sound(SOUND_PATH) if os.path.exists(SOUND_PATH) else None
 win_sound = pygame.mixer.Sound(WIN_SOUND_PATH) if os.path.exists(WIN_SOUND_PATH) else None
+mario_haha_sound = pygame.mixer.Sound(MARIO_HAHA_PATH) if os.path.exists(MARIO_HAHA_PATH) else None
 draw_sound = pygame.mixer.Sound(DRAW_SOUND_PATH) if os.path.exists(DRAW_SOUND_PATH) else None
 snap_sound = pygame.mixer.Sound(SNAP_SOUND_PATH) if os.path.exists(SNAP_SOUND_PATH) else None
 pop_sound = pygame.mixer.Sound(POP_SOUND_PATH) if os.path.exists(POP_SOUND_PATH) else None
@@ -94,9 +97,9 @@ TOTAL_TIME_TO_WIN = 0.0
 
 
 # --- Background Config ---
-BG_WIDTH = 900  # You can adjust this
-BG_HEIGHT = 700  # You can adjust this
-BG_SCALE = 1.0  # You can adjust this (1.0 = no scale, >1 = bigger)
+BG_WIDTH = 500  # You can adjust this
+BG_HEIGHT = 600  # You can adjust this
+BG_SCALE = 1.7  # You can adjust this (1.0 = no scale, >1 = bigger)
 
 SPRITE_BG = pygame.image.load(SPRITE_BG_PATH) if os.path.exists(SPRITE_BG_PATH) else pygame.Surface((BG_WIDTH, BG_HEIGHT))
 
@@ -131,7 +134,7 @@ def play_music():
 
 def reset_game():
     global lines_x, mario_x, mario_y, mario_sliding, pipes, drawing, start_point, webs
-    global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR, websAmount, TIME_TO_WIN, TOTAL_TIME_TO_WIN
+    global game_over, slide_target, prev_path, start_time, SEC_ALIVE, VLINE_STAR, websAmount, TIME_TO_WIN, TOTAL_TIME_TO_WIN, MARIO_SPEED
     global STAR_IDX, waiting_for_win_sound, win_sound_end_time
     if 'webs' not in globals():
         webs = []
@@ -162,7 +165,8 @@ def reset_game():
     if wonGames < 3 and not getattr(reset_game, 'skip_webs_clear', False):
         webs.clear()
         websAmount = 0
-
+    if wonGames > 2:
+        MARIO_SPEED = MARIO_SPEED_3
     if wonGames == 3: # Equivalent to rounds getting progressively harder. Also wongames being 3 means that this won't run ever again.
         webs.clear()
         load_web_map("3_Round_webMap.json")
@@ -184,12 +188,6 @@ reset_game()
 running = True
 while running:
     clock.tick(FPS)
-
-    if waiting_for_win_sound:
-        if time.time() >= win_sound_end_time:
-            waiting_for_win_sound = False
-            reset_game()
-        continue
 
     if not game_over:
         SEC_ALIVE = round(time.time() - start_time, 2)
@@ -224,7 +222,7 @@ while running:
                     speedup_sound.play()
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_SPACE:
-                MARIO_SPEED = MARIO_SPEED_DEFAULT
+                MARIO_SPEED = MARIO_SPEED_DEFAULT if wonGames < 3 else MARIO_SPEED_3
 
         if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
             mx, my = pygame.mouse.get_pos()
@@ -412,15 +410,15 @@ while running:
             if abs(mario_center_x - star_x) < 5:
                 for rect, color in pipes:
                     if color == (255, 255, 0) and rect.top - mario_y < 5:
-                        if win_sound:
+                        if win_sound and mario_haha_sound:
                             win_sound.play()
-                            waiting_for_win_sound = True
-                            win_sound_end_time = time.time() + win_sound.get_length()
+                            mario_haha_sound.play()
                         game_over = True
                         TIME_TO_WIN = SEC_ALIVE
                         wonGames += 1
                         # Add TIME_TO_WIN to TOTAL_TIME_TO_WIN
                         TOTAL_TIME_TO_WIN += TIME_TO_WIN if TIME_TO_WIN is not None else 0
+                        reset_game()  # Instantly go to next round after win
             else:
                 if scream_sound: scream_sound.play()
                 game_over = True
